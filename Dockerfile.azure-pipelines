@@ -1,28 +1,49 @@
 FROM ubuntu:latest
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update
-RUN DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+ENV DEBIAN_FRONTEND noninteractive
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-    apt-transport-https \
-    apt-utils \
-    ca-certificates \
-    curl \
-    git \
-    iputils-ping \
-    jq \
-    lsb-release \
-    software-properties-common \
-    wget
+RUN apt update -y \ 
+&& apt upgrade -y \ 
+&& apt install curl git jq libicu70 -y \ 
+&& apt-get install -y wget \
+&& rm -rf /var/lib/apt/lists/*
 
-RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+# setup powershell
+# Download the Microsoft repository GPG keys
+RUN wget -q https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb
+# Register the Microsoft repository GPG keys
+RUN dpkg -i packages-microsoft-prod.deb
 
-# Can be 'linux-x64', 'linux-arm64', 'linux-arm', 'rhel.6-x64'.
-ENV TARGETARCH=linux-x64
+# Update the list of products
+RUN apt-get update && apt-get install -y \
+    libunwind8 \ 
+    mono-complete \
+    powershell \
+    unzip \
+    openjdk-8-jdk
 
-WORKDIR /azp
+RUN pwsh -v
 
-COPY azure-pipelines-agent/start.sh .
-RUN chmod +x start.sh
+# Get Chrome
+RUN apt-get install -y wget
+RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+RUN apt-get install -y ./google-chrome-stable_current_amd64.deb
+
+
+# Also can be "linux-arm", "linux-arm64".
+ENV TARGETARCH="linux-x64"
+
+WORKDIR /azp/
+
+COPY ./start.sh ./
+RUN chmod +x ./start.sh
+
+# Create agent user and set up home directory
+RUN useradd -m -d /home/agent agent
+RUN chown -R agent:agent /azp /home/agent
+
+USER agent
+# Another option is to run the agent as root.
+# ENV AGENT_ALLOW_RUNASROOT="true"
 
 ENTRYPOINT [ "./start.sh" ]
