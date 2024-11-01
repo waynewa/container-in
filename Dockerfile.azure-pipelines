@@ -11,30 +11,12 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommend
     git \
     iputils-ping \
     jq \
-    libicu70 \
+	libicu70 \
     lsb-release \
     software-properties-common \
     wget
 
-
-# setup powershell
-# Download the Microsoft repository GPG keys
-RUN wget -q https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb
-# Register the Microsoft repository GPG keys
-RUN dpkg -i packages-microsoft-prod.deb
-
-# Update the list of products
-RUN apt-get update && apt-get install -y \
-    libunwind8 \ 
-    mono-complete \
-    powershell \
-    unzip \
-    openjdk-8-jdk
-
-RUN pwsh -v
-
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
-
 
 # Can be 'linux-x64', 'linux-arm64', 'linux-arm', 'rhel.6-x64'.
 ENV TARGETARCH=linux-x64
@@ -43,3 +25,5 @@ WORKDIR /azp
 
 COPY azure-pipelines-agent/start.sh .
 RUN chmod +x start.sh
+
+ENTRYPOINT [ "./start.sh" ]
