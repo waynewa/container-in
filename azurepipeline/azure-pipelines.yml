@@ -1,0 +1,52 @@
+trigger:
+- main
+
+pool:
+  name: containerapp-adoagent
+
+jobs:
+- job: Setup
+  displayName: Get Environment - Linux
+
+- job: GetIPAddress
+  displayName: Get IP Address
+  dependsOn: Setup
+  steps:
+  - script: echo Hello, world!
+    displayName: 'Run a one-line script'
+
+  - bash: |
+      apt install net-tools -y
+      Current_IP=$(curl ipinfo.io/ip)
+      echo "Current IP address is: $Current_IP"
+      echo "##vso[task.setvariable variable=IP_ADDR;isOutput=true]$Current_IP"
+      ifconfig
+      hostname
+    displayName: Get IP on Linux
+
+- job: CheckRDP
+  displayName: Check RDP Port  - PowerShell
+  dependsOn: GetIPAddress
+  steps:
+  - script: |
+      # Check if PowerShell is installed, and if not, install it
+      if ! command -v pwsh &> /dev/null; then
+          echo "PowerShell is not installed. Installing PowerShell..."
+          apt-get install wget
+          # Install PowerShell Core
+          wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+          dpkg -i packages-microsoft-prod.deb
+          apt-get update
+          apt-get install -y powershell
+      else
+          echo "PowerShell is already installed."
+      fi
+    displayName: Install PowerShell if not installed
+
+  - powershell: |
+      $IP_ADDR = $env:IP_ADDR
+      $Target_IP = "10.0.0.5"
+      $Port = '3389'
+      $connection = New-Object System.Net.Sockets.TcpClient($Target_IP, $Port)
+      if ($connection.Connected) { Write-Host "Success"   } else {   Write-Host "Failed"  }
+    displayName: Check RDP Port
