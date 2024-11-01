@@ -1,12 +1,21 @@
 FROM ubuntu:latest
 
-ENV DEBIAN_FRONTEND noninteractive
+RUN DEBIAN_FRONTEND=noninteractive apt-get update
+RUN DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 
-RUN apt update -y \ 
-&& apt upgrade -y \ 
-&& apt install curl git jq libicu70 -y \ 
-&& apt-get install -y wget \
-&& rm -rf /var/lib/apt/lists/*
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+    apt-transport-https \
+    apt-utils \
+    ca-certificates \
+    curl \
+    git \
+    iputils-ping \
+    jq \
+    libicu70 \
+    lsb-release \
+    software-properties-common \
+    wget
+
 
 # setup powershell
 # Download the Microsoft repository GPG keys
@@ -24,26 +33,13 @@ RUN apt-get update && apt-get install -y \
 
 RUN pwsh -v
 
-# Get Chrome
-RUN apt-get install -y wget
-RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-RUN apt-get install -y ./google-chrome-stable_current_amd64.deb
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 
-# Also can be "linux-arm", "linux-arm64".
-ENV TARGETARCH="linux-x64"
+# Can be 'linux-x64', 'linux-arm64', 'linux-arm', 'rhel.6-x64'.
+ENV TARGETARCH=linux-x64
 
-WORKDIR /azp/
+WORKDIR /azp
 
-COPY ./start.sh ./
-RUN chmod +x ./start.sh
-
-# Create agent user and set up home directory
-RUN useradd -m -d /home/agent agent
-RUN chown -R agent:agent /azp /home/agent
-
-USER agent
-# Another option is to run the agent as root.
-# ENV AGENT_ALLOW_RUNASROOT="true"
-
-ENTRYPOINT [ "./start.sh" ]
+COPY azure-pipelines-agent/start.sh .
+RUN chmod +x start.sh
